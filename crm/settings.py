@@ -13,7 +13,8 @@ INSTALLED_APPS = [
     'crm',
 ]
 
-# Configure django-crontab to run the heartbeat every 5 minutes
+# Configure django-crontab to run the heartbeat every 5 minutes and low-stock job every 12 hours
 CRONJOBS = [
     ('*/5 * * * *', 'crm.cron.log_crm_heartbeat'),
+    ('0 */12 * * *', 'crm.cron.update_low_stock'),
 ]

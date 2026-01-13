@@ -36,3 +36,66 @@ def log_crm_heartbeat():
         except Exception as exc:
             with open(LOG_FILE, 'a') as f:
                 f.write(f"{ts} GraphQL hello check failed: {exc}\n")
+
+
+# Low-stock update log path
+LOW_STOCK_LOG = "/tmp/low_stock_updates_log.txt"
+
+
+def update_low_stock():
+    """Call the UpdateLowStockProducts mutation and log updated product names and stock levels.
+
+    The mutation expected on the GraphQL endpoint is `updateLowStockProducts` which returns
+    `updatedProducts { name stock }` and a success message.
+    """
+    ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
+    if not requests:
+        with open(LOW_STOCK_LOG, 'a') as f:
+            f.write(f"[{ts}] requests library not available; cannot call GraphQL endpoint\n")
+        return
+
+    mutation = '''
+    mutation {
+      updateLowStockProducts {
+        success
+        message
+        updatedProducts {
+          name
+          stock
+        }
+      }
+    }
+    '''
+
+    try:
+        resp = requests.post('http://localhost:8000/graphql', json={'query': mutation}, timeout=10)
+        data = resp.json()
+
+        # Detect GraphQL-level errors
+        if data.get('errors'):
+            with open(LOW_STOCK_LOG, 'a') as f:
+                f.write(f"[{ts}] Mutation errors: {data.get('errors')}\n")
+            return
+
+        payload = data.get('data', {}).get('updateLowStockProducts') or data.get('data', {}).get('update_low_stock_products')
+
+        if not payload:
+            with open(LOW_STOCK_LOG, 'a') as f:
+                f.write(f"[{ts}] No payload returned from mutation\n")
+            return
+
+        updated = payload.get('updatedProducts') or payload.get('updated_products') or []
+
+        with open(LOW_STOCK_LOG, 'a') as f:
+            if not updated:
+                f.write(f"[{ts}] No products were updated\n")
+            else:
+                for p in updated:
+                    name = p.get('name')
+                    stock = p.get('stock')
+                    f.write(f"[{ts}] Updated product: {name} new_stock: {stock}\n")
+
+    except Exception as exc:
+        with open(LOW_STOCK_LOG, 'a') as f:
+            f.write(f"[{ts}] Mutation request failed: {exc}\n")
