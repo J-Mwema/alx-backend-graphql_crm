@@ -18,17 +18,17 @@ from crm.models import Customer, Order
 
 one_year_ago = timezone.now() - timedelta(days=365)
 
-deleted = 0
+count = 0
 for customer in Customer.objects.all():
     # Check if customer has any orders in the past year
     if not Order.objects.filter(customer=customer, created__gte=one_year_ago).exists():
         customer.delete()
-        deleted += 1
+        count += 1
 
 # Log the result with a timestamp
-log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Deleted {deleted} inactive customers\n"
+log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Deleted {count} inactive customers\n"
 with open('/tmp/customer_cleanup_log.txt', 'a') as f:
     f.write(log_message)
 
-print(f"Deleted {deleted} inactive customers")
+print(f"Deleted {count} inactive customers")
 PY
