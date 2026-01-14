@@ -45,36 +45,31 @@ class OrderInput(InputObjectType):
     order_date = String()
 
 # --- Mutations ---
-class CreateCustomer(Mutation):
+class CreateCustomer(graphene.Mutation):
     class Arguments:
-        input = CustomerInput(required=True)
+        name = graphene.String(required=True)
+        email = graphene.String(required=True)
+        phone = graphene.String(required=True)
 
-    customer = Field(CustomerType)
-    message = String()
-    success = Boolean()
-    errors = List(String)
-
-    @classmethod
-    def validate_phone(cls, phone):
-        if not phone:
-            return True
-        pattern = r"^(\+\d{10,15}|\d{3}-\d{3}-\d{4})$"
-        return re.match(pattern, phone)
+    customer = graphene.Field(CustomerType)
+    message = graphene.String()
+    success = graphene.Boolean()
+    errors = graphene.List(graphene.String)
 
     @classmethod
-    def mutate(cls, root, info, input):
+    def mutate(cls, root, info, name, email, phone):
         errors = []
-        if not cls.validate_phone(input.get("phone")):
+        # Example phone validation
+        import re
+        pattern = r"^(\+\d{10,15}|\d{3}-\d{3}-\d{4})$"
+        if phone and not re.match(pattern, phone):
             errors.append("Invalid phone format.")
-        if Customer.objects.filter(email=input["email"]).exists():
+        if Customer.objects.filter(email=email).exists():
             errors.append("Email already exists.")
         if errors:
             return CreateCustomer(customer=None, message="Validation failed.", success=False, errors=errors)
-        customer = Customer.objects.create(
-            name=input["name"],
-            email=input["email"],
-            phone=input.get("phone", "")
-        )
+        customer = Customer(name=name, email=email, phone=phone)
+        customer.save()
         return CreateCustomer(customer=customer, message="Customer created successfully.", success=True, errors=[])
 
 class BulkCreateCustomers(Mutation):
