@@ -3,7 +3,7 @@ from graphene import Field, List, String, Int, Float, Boolean, Mutation, InputOb
 from graphene_django import DjangoObjectType
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from models import Customer, Product, Order
+from crm.models import Customer, Product, Order
 import re
 from django.utils import timezone
 
@@ -173,8 +173,11 @@ class Mutation(graphene.ObjectType):
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
 
-    # Register the mutation in the schema. Graphene will expose it as `updateLowStockProducts`.
-    update_low_stock_products = UpdateLowStockProducts.Field()
+# --- Queries ---
+class Query(graphene.ObjectType):
+    all_customers = graphene.List(CustomerType)
 
+    def resolve_all_customers(root, info):
+        return Customer.objects.all()
 
-schema = graphene.Schema(mutation=Mutation)
+schema = graphene.Schema(query=Query, mutation=Mutation)
