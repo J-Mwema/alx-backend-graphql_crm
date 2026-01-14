@@ -1,9 +1,11 @@
 import graphene
 from graphene import Field, List, String, Int, Float, Boolean, Mutation, InputObjectType
 from graphene_django import DjangoObjectType
+from graphene_django.filter import DjangoFilterConnectionField
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from crm.models import Customer, Product, Order
+from crm.filters import CustomerFilter, ProductFilter, OrderFilter
 import re
 from django.utils import timezone
 
@@ -12,16 +14,19 @@ class CustomerType(DjangoObjectType):
     class Meta:
         model = Customer
         fields = ("id", "name", "email", "phone")
+        filterset_class = CustomerFilter
 
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
         fields = ("id", "name", "price", "stock")
+        filterset_class = ProductFilter
 
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
         fields = ("id", "customer", "products", "total_amount", "order_date")
+        filterset_class = OrderFilter
 
 # --- Inputs ---
 class CustomerInput(InputObjectType):
@@ -175,7 +180,9 @@ class Mutation(graphene.ObjectType):
 
 # --- Queries ---
 class Query(graphene.ObjectType):
-    all_customers = graphene.List(CustomerType)
+    all_customers = DjangoFilterConnectionField(CustomerType)
+    all_products = DjangoFilterConnectionField(ProductType)
+    all_orders = DjangoFilterConnectionField(OrderType)
 
     def resolve_all_customers(root, info):
         return Customer.objects.all()
